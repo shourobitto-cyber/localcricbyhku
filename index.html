@@ -1287,7 +1287,17 @@ function saveName(n){
 
 /* ----- subscriptions ----- */
 function snapMap(s){var n={};s.docs.forEach(function(x){var v=JSON.parse(JSON.stringify(x.data()));n[x.id]=v});return n}
-function sub(col,fn){try{db.collection(col).onSnapshot(function(s){fn(s);bgDraw()},function(){})}catch(e){}}
+var dbErr="";
+function sub(col,fn){try{db.collection(col).onSnapshot(function(s){if(dbErr){dbErr=""}fn(s);bgDraw()},function(e){dbErr=(e&&e.code)||"error";bgDraw()})}catch(e){}}
+function dbBanner(){
+  var h="";
+  if(dbErr){var c=dbErr,msg=c==="permission-denied"?L2("Database refused access (permission-denied). In Firebase → Firestore → Rules, publish the latest rules.","ডাটাবেস অনুমতি দিচ্ছে না (permission-denied)। Firebase → Firestore → Rules এ নতুন রুলস Publish করুন।"):
+    (c==="unavailable"||c==="failed-precondition"||c==="not-found")?L2("Cannot reach the database ("+c+"). Check that Firestore Database is created and the internet is on.","ডাটাবেসে সংযোগ হচ্ছে না ("+c+")। Firestore Database তৈরি করা আছে কিনা ও ইন্টারনেট দেখুন।"):L2("Database error: "+c,"ডাটাবেস সমস্যা: "+c);
+    h+='<div class="card" style="border:2px solid #e3201b"><b>⚠️ '+esc(msg)+'</b></div>'}
+  else if(FBFAIL){h+='<div class="card" style="border:2px solid #e3201b"><b>⚠️ '+L2("Firebase could not load. Data is NOT being shared. Check internet/ad-blocker and firebase-config.js.","Firebase লোড হয়নি। ডাটা শেয়ার হচ্ছে না। ইন্টারনেট/অ্যাড-ব্লকার ও firebase-config.js দেখুন।")+'</b></div>'}
+  else if(!dbOn&&/^https?:/.test(location.protocol)&&!window.claude){h+='<div class="card" style="border:2px solid #e3201b"><b>⚠️ '+L2("Demo mode: firebase-config.js was not found, so nothing is shared.","ডেমো মোড: firebase-config.js পাওয়া যায়নি, তাই ডাটা শেয়ার হচ্ছে না।")+'</b></div>'}
+  return h}
+var FBMODE=false,FBFAIL=false;
 function subscribe(){
   sub("tournaments",function(s){T=snapMap(s);Object.keys(T).forEach(function(k){T[k].id=k});reindex();loaded=true});
   sub("matches",function(s){MM=snapMap(s);reindex()});
@@ -1312,7 +1322,7 @@ function draw(){
   paintBrand();flashCheck();var a=document.getElementById("adm");a.textContent=t("admin");a.className="tab"+(view==="admin"?" on":"");
   document.body.classList.toggle("isadm",view==="admin"&&hasAdmin());document.body.classList.toggle("scoring",view==="admin"&&hasAdmin()&&adm==="live"&&asub==="score"&&!!mid&&!pkOpen&&!aset.match(/^(start|quick)$/));
   var y=window.pageYOffset;
-  app.innerHTML=view==="admin"?adminV():view==="match"?matchV():view==="player"?playerV():view==="archive"?archiveV():homeV();
+  app.innerHTML=dbBanner()+(view==="admin"?adminV():view==="match"?matchV():view==="player"?playerV():view==="archive"?archiveV():homeV());
   if(view!=="admin")app.innerHTML+=footerV();
   if(goTop){window.scrollTo(0,0);goTop=false}else window.scrollTo(0,y);
 }
@@ -3029,15 +3039,30 @@ document.addEventListener("keydown",function(ev){
   if(ACT[p[0]])ACT[p[0]]({dataset:{v:p[1]}},ev)});
 draw();
 function loadJs(src){return new Promise(function(res,rej){var e=document.createElement("script");e.src=src;e.onload=res;e.onerror=rej;document.head.appendChild(e)})}
-function bootFirebase(cfg){
+/* Firestore cannot store arrays inside arrays (e.g. players per team) -> encode/decode transparently */
+function fsEnc(v){
+  if(Array.isArray(v)){if(v.some(Array.isArray))return {__na:v.map(function(x){return {a:fsEnc(x)}})};return v.map(fsEnc)}
+  if(v&&typeof v==="object"){var o={};Object.keys(v).forEach(function(k){o[k]=fsEnc(v[k])});return o}
+  return v}
+function fsDec(v){
+  if(Array.isArray(v))return v.map(fsDec);
+  if(v&&typeof v==="object"){if(Array.isArray(v.__na))return v.__na.map(function(x){return fsDec(x.a)});var o={};Object.keys(v).forEach(function(k){o[k]=fsDec(v[k])});return o}
+  return v}
+function fsSnap(sn){return {id:sn.id,exists:sn.exists,data:function(){return fsDec(sn.data())}}}
+function fsWrap(d){return {
+  collection:function(c){return {onSnapshot:function(ok,er){return d.collection(c).onSnapshot(function(s){ok({docs:s.docs.map(fsSnap)})},er)}}},
+  doc:function(p){var r=d.doc(p);return {
+    set:function(o){return r.set(fsEnc(o))},update:function(o){return r.update(fsEnc(o))},
+    get:function(){return r.get().then(fsSnap)},delete:function(){return r.delete()}}}}}
+function bootFirebase(cfg){FBMODE=true;
   var V="https://www.gstatic.com/firebasejs/10.12.2/";
   loadJs(V+"firebase-app-compat.js").then(function(){return loadJs(V+"firebase-firestore-compat.js")}).then(function(){
     firebase.initializeApp(cfg);var d=firebase.firestore();
     try{d.settings({ignoreUndefinedProperties:true,experimentalAutoDetectLongPolling:true,merge:true})}catch(e){}
-    db=d;dbOn=true;canWrite=false;
+    db=fsWrap(d);dbOn=true;canWrite=false;
     subscribe();sub("templates",function(s){TPL=s.docs.map(function(x){var v=JSON.parse(JSON.stringify(x.data()));v.id=x.id;return v})});
     initIdentity();draw();
-  }).catch(function(){canWrite=true;initIdentity();subscribeMemesLocal();draw()});
+  }).catch(function(){FBFAIL=true;canWrite=false;dbOn=false;initIdentity();draw()});
   setTimeout(function(){if(dbOn&&!loaded){loaded=true;draw()}},10000)}
 function boot(){
   if(!(window.claude&&claude.use)&&window.HKU_FIREBASE&&window.HKU_FIREBASE.apiKey&&window.HKU_FIREBASE.projectId){return bootFirebase(window.HKU_FIREBASE)}
