@@ -765,7 +765,7 @@ body.scoring button.k.ot,body.scoring button.k.otn{width:30px;min-width:30px;hei
 body.scoring button.k.undo{margin-right:10px}
 </style>
 <div class="wrap">
-<header class="top"><h1 id="home">Cricket Scoreboard</h1><div class="hr"><button class="ib" id="thm" aria-label="Theme">🌓</button><button class="tab" id="adm" style="min-height:34px;padding:4px 12px"></button><div class="tg"><button id="en">EN</button><button id="bn">বাংলা</button></div></div></header>
+<header class="top"><h1 id="home">Cricket Scoreboard</h1><div class="hr"><button class="ib" id="thm" aria-label="Theme">🌓</button><button class="ib" id="gset" aria-label="Settings">⚙️</button><button class="tab" id="adm" style="min-height:34px;padding:4px 12px"></button><div class="tg"><button id="en">EN</button><button id="bn">বাংলা</button></div></div></header>
 <div id="app"></div>
 </div>
 <div class="mdl" id="mdl" hidden></div>
@@ -1347,6 +1347,7 @@ document.getElementById("mdl").addEventListener("click",function(ev){
 document.getElementById("en").onclick=function(){setLang("en")};
 document.getElementById("bn").onclick=function(){setLang("bn")};
 document.getElementById("home").onclick=function(){nav(function(){view="home"})};
+document.getElementById("gset").onclick=function(){ACT.gset()};
 document.getElementById("adm").onclick=function(){nav(function(){view=view==="admin"?"home":"admin"})};
 function setLang(l){lang=l;lsSet("hku_lang",l);draw()}
 
@@ -3042,8 +3043,9 @@ var FTMAP={comm:"cm",overs:"ov",graphs:"gr",squads:"sq"};
 function ftx(m,k){var x=T[tidOf(m)];return !(x&&x.ft&&x.ft[k]===0)}
 function tabOn(m,id){return !FTMAP[id]||ftx(m,FTMAP[id])}
 function sessBar(){
+  if(adm==="settings")return "";
   var role=isDev()?L2("Developer","ডেভেলপার"):canWrite?L2("Owner","মালিক"):L2("Tournament admin","টুর্নামেন্ট অ্যাডমিন");
-  return '<div class="card offl"><div class="row sp"><span>👤 <b>'+role+'</b></span><span><button class="k sm" data-a="adm" data-v="settings">⚙️ '+L2("Settings","সেটিংস")+'</button> <button class="k sm w" data-a="alogout">🚪 '+L2("Sign out","সাইন আউট")+'</button></span></div></div>'}
+  return '<div class="card offl"><div class="row sp"><span>👤 <b>'+role+'</b></span><span><button class="k sm w" data-a="alogout">🚪 '+L2("Sign out","সাইন আউট")+'</button></span></div></div>'}
 ACT.alogout=function(){
   ask(L2("Sign out of admin on this device?","এই ডিভাইসে অ্যাডমিন থেকে সাইন আউট করবেন?"),L2("Sign out","সাইন আউট"),function(){
     try{var ks=[];for(var i=0;i<localStorage.length;i++){var k=localStorage.key(i);if(k&&(k.indexOf("hku_adm_")===0||k==="hku_dev"))ks.push(k)}ks.forEach(function(k){localStorage.removeItem(k)})}catch(e){}
@@ -3063,9 +3065,9 @@ function devLoginCard(){
   return '<div class="card"><b>👨‍💻 '+L2("Developer login","ডেভেলপার লগইন")+'</b><label>'+L2("Username","ইউজারনেম")+'</label><input id="dvu" autocomplete="off" data-enter="devlogin|0"><label>'+L2("Password","পাসওয়ার্ড")+'</label><input id="dvp" type="password" autocomplete="off" data-enter="devlogin|0">'+(DV.err?'<div class="err">'+esc(DV.err)+'</div>':'')+'<div class="ac"><button class="k pri" data-a="devlogin">'+L2("Developer sign in","ডেভেলপার সাইন ইন")+'</button></div></div>'}
 ACT.devlogin=function(){
   var u=document.getElementById("dvu"),p=document.getElementById("dvp");if(!u||!p)return;
-  if(u.value.trim().toLowerCase()===DEVU&&pwHash(DEVS,DEVU,p.value)===DEVH){lsSet("hku_dev",DEVH);DV.err="";adm="settings";setTab="dev";view="admin";draw()}
+  if(u.value.trim().toLowerCase()===DEVU&&pwHash(DEVS,DEVU,p.value)===DEVH){lsSet("hku_dev",DEVH);DV.err="";adm="settings";setPg="";view="admin";draw()}
   else{DV.err=L2("Wrong username or password","ইউজারনেম বা পাসওয়ার্ড ভুল");draw()}};
-ACT.devout=function(){try{localStorage.removeItem("hku_dev")}catch(e){}setTab="admin";draw()};
+ACT.devout=function(){try{localStorage.removeItem("hku_dev")}catch(e){}setPg="";draw()};
 var FEATS=[["fc","💬","Fan comments","ফ্যান কমেন্ট"],["bt","🎯","Predictions","প্রেডিকশন"],["cm","🎤","Commentary tab","কমেন্ট্রি ট্যাব"],["ov","🔢","Overs tab","ওভারস ট্যাব"],["gr","📈","Graphs tab","গ্রাফ ট্যাব"],["sq","👥","Squads tab","স্কোয়াড ট্যাব"]];
 ACT.ftog=function(el){var x=T[tid];if(!x)return;var k=el.dataset.v;x.ft=x.ft||{};x.ft[k]=x.ft[k]===0?1:0;saveT(x,["ft"]);draw()};
 ACT.devreset=function(){
@@ -3086,6 +3088,48 @@ function devSec(){
 function settingsSec(){
   var h=setTabs();
   return h+(setTab==="dev"?devSec():adminSetSec())}
+
+/* ===== v6: organised Settings menu (one page per topic) ===== */
+var setPg="";
+ACT.spg=function(el){setPg=el.dataset.v||"";goTop=true;draw()};
+ACT.gset=function(){nav(function(){view="admin";adm="settings";setPg=""})};
+(function(){var o=ACT.adm;ACT.adm=function(el){if(el.dataset.v==="settings")setPg="";o(el)}})();
+ACT.devnew=function(){adm="setup";setPg="";ACT.twnew()};
+function spItem(pg,ic,ti,de){return '<button class="k" style="width:100%;text-align:left;margin-top:8px;padding:10px 12px;height:auto" data-a="spg" data-v="'+pg+'"><b>'+ic+' '+ti+'</b><br><span class="mu sm">'+de+'</span></button>'}
+function spBack(ti){return '<button class="back" data-a="spg" data-v="">← '+L2("Settings","সেটিংস")+'</button><h3 style="margin:6px 0">'+ti+'</h3>'}
+function noT(){return '<div class="card empty">'+L2("No tournament yet. Create one from the 🏆 Setup tab.","এখনো কোনো টুর্নামেন্ট নেই। 🏆 সেটআপ ট্যাব থেকে বানান।")+'</div>'}
+function featCard(){
+  var x=T[tid],ft=x.ft||{};
+  return '<div class="card"><b>🎛 '+L2("Functions for this tournament","এই টুর্নামেন্টের ফাংশন")+'</b>'+FEATS.map(function(f){var on=ft[f[0]]!==0;return '<div class="row sp" style="margin-top:6px"><span>'+f[1]+' '+L2(f[2],f[3])+'</span><button class="k sm'+(on?" pri":"")+'" data-a="ftog" data-v="'+f[0]+'">'+(on?"ON":"OFF")+'</button></div>'}).join("")+'</div>'}
+function resetCard(){
+  var x=T[tid];
+  return '<div class="card"><b>🔑 '+L2("Reset admin login","অ্যাডমিন লগইন রিসেট")+'</b><div class="mu sm">'+L2("Current username","বর্তমান ইউজারনেম")+': <b>'+esc(x.au||"—")+'</b></div><label>'+L2("Username","ইউজারনেম")+'</label><input id="dvau" autocomplete="off" value="'+esc(x.au||"")+'"><label>'+L2("New password","নতুন পাসওয়ার্ড")+'</label><input id="dvap" type="password" autocomplete="new-password" data-enter="devreset|0"><div class="ac"><button class="k" data-a="devreset">'+L2("Set","সেট করুন")+'</button></div></div>'}
+function settingsSec(){
+  var dev=isDev(),ids=allTids();if(ids.length&&(!tid||!T[tid]))tid=ids[0];
+  var h='<div class="card"><div class="row sp"><span>👤 <b>'+(dev?L2("Developer","ডেভেলপার"):L2("Tournament admin","টুর্নামেন্ট অ্যাডমিন"))+'</b>'+(tid&&T[tid]?' <span class="mu sm">· '+esc(nmx(T[tid].n))+'</span>':'')+'</span><button class="k sm w" data-a="alogout">🚪 '+L2("Sign out","সাইন আউট")+'</button></div></div>';
+  var P={
+    tour:[L2("My tournament","আমার টুর্নামেন্ট"),function(){return ids.length?'<div class="card">'+tSel()+'</div>'+manageV(T[tid]):noT()}],
+    acct:[L2("Admin login & password","অ্যাডমিন লগইন ও পাসওয়ার্ড"),function(){return ids.length?'<div class="card">'+tSel()+'</div>'+authCard(T[tid]):noT()}],
+    staff:[L2("Scorers, umpires & commentator","স্কোরার, আম্পায়ার ও কমেন্টেটর"),function(){return offCard()+cnCard()}],
+    dfun:[L2("Tournament functions","টুর্নামেন্ট ফাংশন"),function(){return ids.length?'<div class="card">'+tSel()+'</div>'+featCard()+resetCard():noT()}],
+    ddir:[L2("Teams, players & jersey numbers","টিম, প্লেয়ার ও জার্সি নম্বর"),function(){return dirSec()}],
+    dlogo:[L2("Logo library","লোগো লাইব্রেরি"),function(){return logoSec()}],
+    dmeme:[L2("Meme phrases","মিম লাইন"),function(){return memeCard()}],
+    dlogin:[L2("Developer login","ডেভেলপার লগইন"),function(){return devLoginCard()}]};
+  if(setPg&&P[setPg]&&(setPg.charAt(0)!=="d"||setPg==="dlogin"||dev)&&!(setPg==="dlogin"&&dev))return h+spBack(P[setPg][0])+P[setPg][1]();
+  setPg="";
+  h+='<div class="card"><b>🛠 '+L2("Tournament admin","টুর্নামেন্ট অ্যাডমিন")+'</b>'+
+    spItem("tour","🏆",L2("My tournament","আমার টুর্নামেন্ট"),L2("Name, logo, teams, players, rules","নাম, লোগো, টিম, প্লেয়ার, নিয়ম"))+
+    spItem("acct","🔐",L2("Admin login & password","অ্যাডমিন লগইন ও পাসওয়ার্ড"),L2("Change username / password","ইউজারনেম / পাসওয়ার্ড বদলান"))+
+    spItem("staff","🧑‍⚖️",L2("Scorers, umpires & commentator","স্কোরার, আম্পায়ার ও কমেন্টেটর"),L2("Saved names for quick pick","দ্রুত বাছাইয়ের জন্য সেভ করা নাম"))+'</div>';
+  if(dev)h+='<div class="card"><b>👨‍💻 '+L2("Developer","ডেভেলপার")+'</b>'+
+    spItem("dfun","🎛",L2("Tournament functions","টুর্নামেন্ট ফাংশন"),L2("Turn features on/off, reset admin login","ফিচার অন/অফ, অ্যাডমিন লগইন রিসেট"))+
+    spItem("ddir","👥",L2("Teams, players & jersey numbers","টিম, প্লেয়ার ও জার্সি নম্বর"),L2("Saved directory used by all tournaments","সব টুর্নামেন্টের জন্য সংরক্ষিত ডিরেক্টরি"))+
+    spItem("dlogo","🖼",L2("Logo library","লোগো লাইব্রেরি"),L2("Team & tournament logos","টিম ও টুর্নামেন্টের লোগো"))+
+    spItem("dmeme","😂",L2("Meme phrases","মিম লাইন"),L2("Restore starter phrases","স্টার্টার লাইন ফিরিয়ে আনুন"))+
+    '<div class="ac"><button class="k pri" data-a="devnew">➕ '+t("newTournament")+'</button> <button class="k sm w" data-a="devout">'+L2("Dev sign out","ডেভ সাইন আউট")+'</button></div></div>';
+  else h+='<div class="card">'+spItem("dlogin","👨‍💻",L2("Developer login","ডেভেলপার লগইন"),L2("Developer access only","শুধু ডেভেলপারদের জন্য"))+'</div>';
+  return h+'<div class="card mu">'+t("rolesNote")+'</div>'}
 
 /* ===== APP: init ===== */
 document.addEventListener("keydown",function(ev){
