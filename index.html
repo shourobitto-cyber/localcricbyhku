@@ -1607,10 +1607,10 @@ function adminNav(){
   var it=[["live","🏏","aLive"],["matches","📋","aMatches"],["setup","🏆","aSetup"],["memes","😂","aMemes"],["log","📜","aLog"],["settings","⚙️","aSet"]];if(!canWrite)it=it.filter(function(z){return z[0]!=="memes"&&z[0]!=="log"});
   return '<nav class="bnav" aria-label="Admin">'+it.map(function(z){return '<button class="'+(adm===z[0]?"on":"")+'" data-a="adm" data-v="'+z[0]+'"><i>'+z[1]+'</i>'+t(z[2])+'</button>'}).join("")+'</nav>'}
 function adminV(){
-  if(!hasAdmin())return aset==="tw"?twV():accessV();
+  if(!hasAdmin())return aset==="tw"?twV():accessV()+devLoginCard();
   if(!tid||!isAdm(tid)){var mt=allTids();tid=mt[0]||null}
   var h=dbOn?"":'<div class="card mu offl">'+t("mode")+'</div>';
-  h+=adminNav();
+  h+=adminNav();h+=sessBar();
   if(adm==="live")h+=liveSec();else if(adm==="matches")h+=matchesSec();else if(adm==="setup")h+=setupSec();else if(adm==="memes")h+=memesSec();else if(adm==="log")h+=logSec();else h+=settingsSec();
   return h}
 
@@ -1633,9 +1633,9 @@ function sha256(str){
 function pwHash(salt,user,pw){var h=sha256(salt+"|"+String(user).trim().toLowerCase()+"|"+pw);for(var i=0;i<400;i++)h=sha256(h+salt);return h}
 function isAdm(id){
   if(canWrite)return true;
-  var x=T[id];return !!(x&&x.ah&&lsGet("hku_adm_"+id)===x.ah)}
+  if(isDev())return true;var x=T[id];return !!(x&&x.ah&&lsGet("hku_adm_"+id)===x.ah)}
 function myTids(){return Object.keys(T).filter(isAdm)}
-function hasAdmin(){return canWrite||myTids().length>0}
+function hasAdmin(){return canWrite||isDev()||myTids().length>0}
 var AU={t:"",u:"",p:"",err:"",mode:""};
 function accessV(){
   var ids=Object.keys(T).filter(function(k){return T[k].ah}).sort(function(a,b){return (T[b].ct||0)-(T[a].ct||0)});
@@ -2384,8 +2384,8 @@ function livePane(m){
   else{
     h+='<div class="sec"><h3>⭐ '+t("topPerf")+'</h3><div class="in">'+topPerf(m,hasI2(m)?1:0)+'</div></div>'}
   var ov=E.overs(m,i).slice(-4).reverse();
-  if(ov.length)h+='<div class="sec"><h3>🔢 '+t("recentOvers")+'<button class="chip sm on" data-a="vt" data-v="overs">'+t("tOvers")+' →</button></h3><div class="in">'+ov.map(function(o){return '<div class="prt"><div class="h"><span>'+t("ov")+' '+dg(o.n)+' <span class="mu sm">· '+o.bw.map(plk).join(", ")+'</span></span><span>'+dg(o.runs)+' '+t("runs2")+(o.wk?' · <span style="color:var(--rd)">'+dg(o.wk)+' W</span>':'')+'</span></div><div class="balls" style="margin-top:4px">'+o.balls.map(chip).join("")+'</div></div>'}).join("")+'</div></div>';
-  return h+latestStrip(m)}
+  if(ov.length&&tabOn(m,"overs"))h+='<div class="sec"><h3>🔢 '+t("recentOvers")+'<button class="chip sm on" data-a="vt" data-v="overs">'+t("tOvers")+' →</button></h3><div class="in">'+ov.map(function(o){return '<div class="prt"><div class="h"><span>'+t("ov")+' '+dg(o.n)+' <span class="mu sm">· '+o.bw.map(plk).join(", ")+'</span></span><span>'+dg(o.runs)+' '+t("runs2")+(o.wk?' · <span style="color:var(--rd)">'+dg(o.wk)+' W</span>':'')+'</span></div><div class="balls" style="margin-top:4px">'+o.balls.map(chip).join("")+'</div></div>'}).join("")+'</div></div>';
+  return h+(ftx(m,"cm")?latestStrip(m):"")}
 
 /* ---------- scorecard ---------- */
 function inSeg(m,fn){
@@ -2533,11 +2533,11 @@ function matchV(){
   var m=getMatch(mid);
   if(!m)return '<button class="back" data-a="home">'+t("back")+'</button><div class="card empty">'+t("noMatches")+'</div>';
   if(sciM!==m.id){sciM=m.id;sci=m.inn;sqt=0;gsel=-1}
-  if(!/^(live|card|comm|overs|graphs|squads)$/.test(vt))vt="live";
+  if(!/^(live|card|comm|overs|graphs|squads)$/.test(vt))vt="live";if(!tabOn(m,vt))vt="live";
   var live=mst(m)==="live";
   return '<button class="back" data-a="home">'+t("back")+'</button>'+board(m)+
-  '<div class="sn stk">'+MTABS.map(function(z){return '<button class="'+(vt===z[0]?"on":"")+'" data-a="vt" data-v="'+z[0]+'"><i>'+z[1]+'</i>'+t(z[2])+(z[0]==="comm"&&live?' <span class="live" style="padding:0 4px;font-size:.6rem"><i style="width:6px;height:6px"></i></span>':'')+'</button>'}).join("")+'</div>'+
-  '<div class="mv2" data-v="'+vt+'"><div class="col"><section class="pn p-live">'+livePane(m)+'</section><section class="pn p-card">'+cardPane(m)+'</section><section class="pn p-overs">'+oversPane(m)+'</section><section class="pn p-graphs">'+graphsPane(m)+'</section><section class="pn p-squads">'+squadsPane(m)+'</section></div><div class="col side"><section class="pn p-comm">'+commPane(m)+'</section></div></div>'}
+  '<div class="sn stk">'+MTABS.filter(function(z){return tabOn(m,z[0])}).map(function(z){return '<button class="'+(vt===z[0]?"on":"")+'" data-a="vt" data-v="'+z[0]+'"><i>'+z[1]+'</i>'+t(z[2])+(z[0]==="comm"&&live?' <span class="live" style="padding:0 4px;font-size:.6rem"><i style="width:6px;height:6px"></i></span>':'')+'</button>'}).join("")+'</div>'+
+  '<div class="mv2" data-v="'+vt+'"><div class="col"><section class="pn p-live">'+livePane(m)+'</section><section class="pn p-card">'+cardPane(m)+'</section><section class="pn p-overs">'+oversPane(m)+'</section><section class="pn p-graphs">'+graphsPane(m)+'</section><section class="pn p-squads">'+squadsPane(m)+'</section></div><div class="col side"><section class="pn p-comm">'+(ftx(m,"cm")?commPane(m):"")+'</section></div></div>'}
 ACT.sci=function(el){sci=+el.dataset.v;gsel=-1;draw()};
 ACT.gtab=function(el){gtab=el.dataset.v;draw()};
 ACT.gsel=function(el){var k=+el.dataset.v;gsel=gsel===k?-1:k;draw()};
@@ -2702,7 +2702,7 @@ ACT.bet=function(el){
 
 /* ---------- commentary pane + live strip ---------- */
 function commPane(m){
-  var live=mst(m)==="live",h=miniStrip(m)+'<div class="cmh"><h3>🎙 '+t("liveComm")+'</h3>'+(live?'<span class="live"><i></i>'+t("live")+'</span>':'')+'</div>'+fanForm(m)+betCard(m)+
+  var live=mst(m)==="live",h=miniStrip(m)+'<div class="cmh"><h3>🎙 '+t("liveComm")+'</h3>'+(live?'<span class="live"><i></i>'+t("live")+'</span>':'')+'</div>'+(ftx(m,"fc")?fanForm(m):"")+(ftx(m,"bt")?betCard(m):"")+
   '<div class="chips"><button class="chip sm'+(cf==="live"?" on":"")+'" data-a="cf" data-v="live">🎤 '+t("cfLive")+'</button><button class="chip sm'+(cf==="ball"?" on":"")+'" data-a="cf" data-v="ball">⚡ '+t("cfBall")+'</button></div>';
   if(cf==="live"){var l=commEntries(m);h+=l.length?blocksHtml(l,false):'<div class="card empty">'+t("noComm")+'</div>'}
   else{var f=ballLines(m);h+='<div class="card flat">'+(f.length?f.map(function(x){return '<div class="ln '+x.k+'">'+x.h+'</div>'}).join(""):'<div class="empty">'+t("bnone")+'</div>')+'</div>'}
@@ -3034,6 +3034,58 @@ INP.dirp=function(el,ev){if(ev!=="change")return;var r=dirArr(el.dataset.f),p=r.
   if(r.f==="n"){if(!v||v===p.n){draw();return}hideN("P",p.n);unhideN("P",v);p.n=v}else p.j=v;saveDir()};
 ACT.dirpdel=function(el){var r=dirArr(el.dataset.v),p=r.arr&&r.arr[r.k];if(!p)return;hideN("P",p.n);r.arr.splice(r.k,1);saveDir()};
 INP.dirtt=function(el,ev){if(ev!=="change")return;var q=el.dataset.f.split("|"),x=T[q[0]];if(!x)return;var n=(x.n||["",""]).slice();n[+q[1]]=el.value.trim();if(!n[0]&&!n[1]){draw();return}x.n=n;saveT(x,["n"]);draw()};
+
+/* ===== v5: Admin settings + Developer settings ===== */
+var DEVU="hku",DEVS="hku-dev-v1",DEVH="0e02346e3e95dcc32a20f94921ef8d11f12def8e433124f75cf57c377da87a61",DV={err:""},setTab="admin";
+function isDev(){return lsGet("hku_dev")===DEVH}
+var FTMAP={comm:"cm",overs:"ov",graphs:"gr",squads:"sq"};
+function ftx(m,k){var x=T[tidOf(m)];return !(x&&x.ft&&x.ft[k]===0)}
+function tabOn(m,id){return !FTMAP[id]||ftx(m,FTMAP[id])}
+function sessBar(){
+  var role=isDev()?L2("Developer","ডেভেলপার"):canWrite?L2("Owner","মালিক"):L2("Tournament admin","টুর্নামেন্ট অ্যাডমিন");
+  return '<div class="card offl"><div class="row sp"><span>👤 <b>'+role+'</b></span><span><button class="k sm" data-a="adm" data-v="settings">⚙️ '+L2("Settings","সেটিংস")+'</button> <button class="k sm w" data-a="alogout">🚪 '+L2("Sign out","সাইন আউট")+'</button></span></div></div>'}
+ACT.alogout=function(){
+  ask(L2("Sign out of admin on this device?","এই ডিভাইসে অ্যাডমিন থেকে সাইন আউট করবেন?"),L2("Sign out","সাইন আউট"),function(){
+    try{var ks=[];for(var i=0;i<localStorage.length;i++){var k=localStorage.key(i);if(k&&(k.indexOf("hku_adm_")===0||k==="hku_dev"))ks.push(k)}ks.forEach(function(k){localStorage.removeItem(k)})}catch(e){}
+    view="home";adm="live";setTab="admin";draw()},true)};
+ACT.setsub=function(el){setTab=el.dataset.v;draw()};
+function setTabs(){
+  return '<div class="seg"><button class="'+(setTab==="admin"?"on":"")+'" data-a="setsub" data-v="admin">🛠 '+L2("Admin settings","অ্যাডমিন সেটিংস")+'</button><button class="'+(setTab==="dev"?"on":"")+'" data-a="setsub" data-v="dev">👨‍💻 '+L2("Developer","ডেভেলপার")+'</button></div>'}
+function memeCard(){return '<div class="card"><b>😂 '+t("memeLib")+'</b><div class="mu">'+t("restoreHelp")+'</div><div class="ac"><button class="k" data-a="restoreSeeds">'+t("restore")+'</button></div></div>'}
+function cnCard(){return '<div class="card"><b>🎤 '+t("cnTitle")+'</b><div class="row sp" style="margin-top:6px"><span>'+(CN.ready?esc(CN.name):'<span class="mu">'+t("cnNone")+'</span>')+'</span><button class="k sm" data-a="cnchange2">'+t("change")+'</button></div></div>'+(CN.edit?nameCard():'')}
+function adminSetSec(){
+  var h='<div class="card warn"><b>🚪 '+L2("Sign out","সাইন আউট")+'</b><div class="mu sm">'+L2("Removes admin access for every tournament on this device.","এই ডিভাইস থেকে সব টুর্নামেন্টের অ্যাডমিন অ্যাক্সেস সরিয়ে দেয়।")+'</div><div class="ac"><button class="k w" data-a="alogout">'+L2("Sign out of admin","অ্যাডমিন থেকে সাইন আউট")+'</button></div></div>';
+  var ids=allTids();
+  if(ids.length){if(!tid||!T[tid])tid=ids[0];
+    h+='<div class="card"><b>🏆 '+L2("My tournament details","আমার টুর্নামেন্টের তথ্য")+'</b><div class="mu sm">'+L2("Edit tournament name & logo, team names & logos, players and more.","টুর্নামেন্টের নাম ও লোগো, টিমের নাম ও লোগো, প্লেয়ার ইত্যাদি এডিট করুন।")+'</div>'+tSel()+'</div>'+authCard(T[tid])+manageV(T[tid])}
+  return h+offCard()+cnCard()+'<div class="card mu">'+t("rolesNote")+'</div>'}
+function devLoginCard(){
+  return '<div class="card"><b>👨‍💻 '+L2("Developer login","ডেভেলপার লগইন")+'</b><label>'+L2("Username","ইউজারনেম")+'</label><input id="dvu" autocomplete="off" data-enter="devlogin|0"><label>'+L2("Password","পাসওয়ার্ড")+'</label><input id="dvp" type="password" autocomplete="off" data-enter="devlogin|0">'+(DV.err?'<div class="err">'+esc(DV.err)+'</div>':'')+'<div class="ac"><button class="k pri" data-a="devlogin">'+L2("Developer sign in","ডেভেলপার সাইন ইন")+'</button></div></div>'}
+ACT.devlogin=function(){
+  var u=document.getElementById("dvu"),p=document.getElementById("dvp");if(!u||!p)return;
+  if(u.value.trim().toLowerCase()===DEVU&&pwHash(DEVS,DEVU,p.value)===DEVH){lsSet("hku_dev",DEVH);DV.err="";adm="settings";setTab="dev";view="admin";draw()}
+  else{DV.err=L2("Wrong username or password","ইউজারনেম বা পাসওয়ার্ড ভুল");draw()}};
+ACT.devout=function(){try{localStorage.removeItem("hku_dev")}catch(e){}setTab="admin";draw()};
+var FEATS=[["fc","💬","Fan comments","ফ্যান কমেন্ট"],["bt","🎯","Predictions","প্রেডিকশন"],["cm","🎤","Commentary tab","কমেন্ট্রি ট্যাব"],["ov","🔢","Overs tab","ওভারস ট্যাব"],["gr","📈","Graphs tab","গ্রাফ ট্যাব"],["sq","👥","Squads tab","স্কোয়াড ট্যাব"]];
+ACT.ftog=function(el){var x=T[tid];if(!x)return;var k=el.dataset.v;x.ft=x.ft||{};x.ft[k]=x.ft[k]===0?1:0;saveT(x,["ft"]);draw()};
+ACT.devreset=function(){
+  var x=T[tid],u=document.getElementById("dvau"),p=document.getElementById("dvap");if(!x||!u||!p)return;
+  if(u.value.trim().length<3||p.value.length<4){toast(L2("Username 3+, password 4+ characters","ইউজারনেম ৩+, পাসওয়ার্ড ৪+ অক্ষর"));return}
+  applyAuth(x,u.value,p.value);saveT(x,["au","as","ah"]);toast(L2("Admin login reset","অ্যাডমিন লগইন রিসেট হয়েছে"));draw()};
+ACT.devnew=function(){adm="setup";ACT.twnew()};
+function devSec(){
+  if(!isDev())return devLoginCard();
+  var h='<div class="card"><div class="row sp"><span>👨‍💻 <b>'+L2("Developer mode","ডেভেলপার মোড")+'</b></span><button class="k sm w" data-a="devout">'+L2("Dev sign out","ডেভ সাইন আউট")+'</button></div></div>';
+  h+='<div class="card"><b>🏆 '+L2("Tournaments","টুর্নামেন্ট")+'</b><div class="ac"><button class="k pri" data-a="devnew">➕ '+t("newTournament")+'</button></div></div>';
+  var ids=allTids();
+  if(ids.length){if(!tid||!T[tid])tid=ids[0];var x=T[tid],ft=x.ft||{};
+    h+='<div class="card"><b>⚙️ '+L2("Functions for this tournament","এই টুর্নামেন্টের ফাংশন")+'</b>'+tSel()+'<div style="margin-top:8px">'+FEATS.map(function(f){var on=ft[f[0]]!==0;return '<div class="row sp" style="margin-top:6px"><span>'+f[1]+' '+L2(f[2],f[3])+'</span><button class="k sm'+(on?" pri":"")+'" data-a="ftog" data-v="'+f[0]+'">'+(on?"ON":"OFF")+'</button></div>'}).join("")+'</div></div>';
+    h+='<div class="card"><b>🔑 '+L2("Reset admin login","অ্যাডমিন লগইন রিসেট")+' · '+esc(nmx(x.n))+'</b><div class="mu sm">'+L2("Current username","বর্তমান ইউজারনেম")+': <b>'+esc(x.au||"—")+'</b></div><label>'+L2("Username","ইউজারনেম")+'</label><input id="dvau" autocomplete="off" value="'+esc(x.au||"")+'"><label>'+L2("New password","নতুন পাসওয়ার্ড")+'</label><input id="dvap" type="password" autocomplete="new-password" data-enter="devreset|0"><div class="ac"><button class="k" data-a="devreset">'+L2("Set","সেট করুন")+'</button></div></div>';
+    h+=manageV(x)}
+  return h+dirSec()+logoSec()+memeCard()}
+function settingsSec(){
+  var h=setTabs();
+  return h+(setTab==="dev"?devSec():adminSetSec())}
 
 /* ===== APP: init ===== */
 document.addEventListener("keydown",function(ev){
