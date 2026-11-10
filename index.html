@@ -3269,4 +3269,143 @@ window.__fit=function(){
 window.addEventListener("resize",function(){__fitK="";if(window.__fit)__fit()});
 </script>
 
+<!-- ===== v15 PATCH: paste this whole block into your HTML right before the closing </body> tag ===== -->
+<style id="v15css">
+/* ---------- bigger, better-spaced bars (top + bottom) ---------- */
+header.top{padding:6px 10px!important;margin:4px 0 10px!important}
+header.top .hr{gap:8px!important}
+header.top .ib{width:42px!important;min-width:42px!important;height:42px!important;min-height:42px!important}
+header.top .tab{min-height:42px!important;padding:6px 14px!important}
+header.top .tg button{min-height:42px!important;padding:6px 12px!important}
+body.scoring header.top{padding:4px 8px!important;margin:2px 0 8px!important}
+body.scoring header.top .ib{width:42px!important;min-width:42px!important;height:42px!important;min-height:42px!important}
+body.scoring header.top .tab,body.scoring header.top .tg button{height:42px!important;min-height:42px!important}
+body.scoring header.top .bl{height:34px!important}
+body.scoring .mline{padding:6px 12px!important;margin-bottom:8px!important}
+body.scoring .mline .k.sm{min-height:42px!important}
+.sn.stk{margin-bottom:8px!important;gap:6px!important;padding:4px!important}
+.sn.stk button{min-height:50px!important}
+body.scoring .sn.stk{margin-bottom:8px!important}
+body.scoring .sn.stk button{min-height:42px!important}
+.bnav{left:12px!important;right:12px!important;bottom:calc(10px + env(safe-area-inset-bottom,0px))!important;padding:6px 8px!important;gap:6px!important;border-radius:24px!important}
+.bnav button,body.scoring .bnav button{min-height:54px!important;font-size:.7rem!important;padding:4px 0!important;gap:2px!important}
+.bnav button i,body.scoring .bnav button i{font-size:1.45rem!important}
+body.scoring .bnav{padding:6px 8px!important;bottom:calc(10px + env(safe-area-inset-bottom,0px))!important;border-radius:24px!important}
+body.isadm .wrap{padding-bottom:104px!important}
+body.scoring.isadm .wrap{padding-bottom:92px!important}
+body.isadm .toast{bottom:calc(96px + env(safe-area-inset-bottom,0px))!important}
+/* spacing between action buttons so thumbs don't hit the wrong one */
+.ac{gap:10px!important}
+.undow{gap:18px!important}
+button.k.ot,body.scoring button.k.ot{width:40px!important;min-width:40px!important;height:40px!important;min-height:40px!important}
+body.scoring .ac>button{min-height:44px!important}
+/* ---------- scroll performance ---------- */
+.wrap::before{display:none!important}
+body:not(.scoring) .cb,body:not(.scoring) .ovc{content-visibility:auto;contain-intrinsic-size:auto 110px}
+</style>
+
+<script id="v15js">
+function __v15(){
+function S(a,b){return L2(a,b)}
+
+/* ===== 1) MATCH DISMISS (replaces "No Result") ===== */
+TX.en.noResult="Match Dismiss";TX.en.nr="Match dismissed";TX.en.undoNr="Undo match dismiss";
+TX.bn.noResult="ম্যাচ বাতিল";TX.bn.nr="ম্যাচ বাতিল";TX.bn.undoNr="ম্যাচ বাতিল ফেরান";
+
+/* public + admin result text now includes the reason */
+var _rt=resultText;
+resultText=function(m){var o=E.outcome(m);if(o.done&&o.nr)return t("nr")+(m.nrr?" \u00b7 "+m.nrr:"");return _rt(m)};
+var _hl0=hl0;
+hl0=function(m){if(m.nrx)return '<div class="ban x">\ud83d\udeab '+esc(resultText(m))+'</div>';return _hl0(m)};
+
+/* remove the button from the main scoring screen */
+var _scoreV=scoreV;
+scoreV=function(m){return _scoreV(m).replace(/<button class="k" data-a="nrAsk"[^>]*>[^<]*<\/button>/,"")};
+
+/* put it inside "Edit players & officials" */
+function dismissCard(m){
+  var x=T[tidOf(m)],pts=x?E.rules(x).pts.nr:1;
+  if(m.nrx)return '<div class="card warn"><b>\ud83d\udeab '+t("noResult")+'</b><div class="mu sm">'+esc(resultText(m))+'</div><div class="ac"><button class="k" data-a="unnr" data-v="'+m.id+'">'+t("undoNr")+'</button></div></div>';
+  if(mst(m)==="done")return "";
+  return '<div class="card warn"><b>\ud83d\udeab '+t("noResult")+'</b><div class="mu sm">'+S("Rain, injury or any other reason: the match closes and each team gets "+dg(pts)+" point.","বৃষ্টি, আঘাত বা অন্য কারণে ম্যাচ বন্ধ হবে এবং প্রতি দল "+dg(pts)+" পয়েন্ট পাবে।")+'</div><div class="ac"><button class="k w" data-a="dsmopen" data-v="'+m.id+'">'+t("noResult")+'</button></div></div>'}
+var _sq2=squadCard2;
+squadCard2=function(m){return _sq2(m)+dismissCard(m)};
+
+/* reason dialog: dropdown + manual text */
+var DREASONS=[["rain","Rain","বৃষ্টি"],["injury","Injury","আঘাত"],["light","Bad light","আলো কম"],["wet","Wet ground / pitch","ভেজা মাঠ / পিচ"],["noshow","Team not available","দল অনুপস্থিত"],["dispute","Dispute","বিবাদ"]];
+var DSM={id:null,sel:"",txt:"",err:""};
+function dsmLabel(k){var r=DREASONS.filter(function(z){return z[0]===k})[0];return r?(lang==="bn"?r[2]:r[1]):""}
+function drawDsm(){
+  var e=document.getElementById("dsm");
+  if(!e){e=document.createElement("div");e.id="dsm";e.className="mdl";e.hidden=true;document.body.appendChild(e);
+    e.addEventListener("click",function(ev){var b=ev.target.closest("[data-d]");if(!b)return;if(b.dataset.d==="yes")dsmGo();else{DSM.id=null;drawDsm()}});
+    e.addEventListener("input",function(ev){if(ev.target.id==="dsmtx")DSM.txt=ev.target.value});
+    e.addEventListener("change",function(ev){if(ev.target.id==="dsmsel")DSM.sel=ev.target.value})}
+  if(!DSM.id){e.hidden=true;e.innerHTML="";return}
+  var m=getMatch(DSM.id),x=m&&T[tidOf(m)],pts=x?E.rules(x).pts.nr:1;
+  e.hidden=false;
+  e.innerHTML='<div role="dialog" aria-modal="true"><h3 style="margin:0 0 6px">\ud83d\udeab '+t("noResult")+'</h3><div class="mu sm">'+S("The match will close and each team gets "+dg(pts)+" point. You can then start a new match.","ম্যাচ বন্ধ হবে এবং প্রতি দল "+dg(pts)+" পয়েন্ট পাবে। এরপর নতুন ম্যাচ শুরু করতে পারবেন।")+'</div>'+
+   '<label>'+S("Reason","কারণ")+'</label><select id="dsmsel"><option value="">'+t("choose")+'</option>'+DREASONS.map(function(r){return '<option value="'+r[0]+'"'+(DSM.sel===r[0]?" selected":"")+'>'+esc(lang==="bn"?r[2]:r[1])+'</option>'}).join("")+'</select>'+
+   '<label>'+S("Or type your own reason","অথবা নিজের কারণ লিখুন")+'</label><input id="dsmtx" maxlength="80" value="'+esc(DSM.txt)+'" placeholder="'+S("Custom reason","নিজের কারণ")+'">'+
+   (DSM.err?'<div class="err">'+esc(DSM.err)+'</div>':'')+
+   '<div class="ac" style="margin-top:12px"><button class="k" data-d="no">'+t("cancel")+'</button><button class="k w" data-d="yes">'+t("noResult")+'</button></div></div>'}
+function dsmOpen(id){DSM={id:id,sel:"",txt:"",err:""};drawDsm()}
+function dsmGo(){
+  var m=getMatch(DSM.id);if(!m){DSM.id=null;drawDsm();return}
+  var txt=(DSM.txt||"").trim().slice(0,80),r=txt||dsmLabel(DSM.sel);
+  if(!r){DSM.err=S("Pick a reason or type one.","একটি কারণ বাছুন বা লিখুন।");drawDsm();return}
+  m.nrx=true;m.nrr=r;m.nrk=txt?"custom":DSM.sel;saveM(m);audit("noresult","match",m.id,null,r);
+  DSM={id:null,sel:"",txt:"",err:""};drawDsm();
+  pend=null;pendW=null;showSq=false;pkOpen=true;
+  toast(t("nr")+" \u00b7 "+r);draw()}
+ACT.nrAsk=function(el){dsmOpen(el.dataset.v)};
+ACT.dsmopen=function(el){dsmOpen(el.dataset.v)};
+ACT.unnr=function(el){var m=getMatch(el.dataset.v);if(!m)return;m.nrx=false;m.nrr="";m.nrk="";saveM(m);audit("undo-noresult","match",m.id,"nr",null);draw()};
+
+/* ===== 2) CREATE TOURNAMENT ON THE HOME PAGE ===== */
+var _homeV=homeV;
+homeV=function(){
+  var h=_homeV();
+  if(dbOn&&!loaded)return h;
+  var big=!visibleTs().length&&!archTs().length,cta;
+  if(big)cta='<div class="card warn" style="text-align:center"><h2 class="hl" style="margin:4px 0">\ud83c\udfc6 '+S("Start your first tournament","আপনার প্রথম টুর্নামেন্ট শুরু করুন")+'</h2><div class="mu" style="margin-bottom:10px">'+S("Create a tournament, add teams, then score live.","টুর্নামেন্ট বানান, দল যোগ করুন, তারপর লাইভ স্কোর দিন।")+'</div><button class="k pri big2 full" data-a="mkt">\ud83c\udfc6 '+S("Create Tournament","টুর্নামেন্ট তৈরি করুন")+'</button></div>';
+  else cta='<div class="row" style="margin:0 0 10px"><button class="k pri grow" style="min-height:46px" data-a="mkt">\u2795 '+S("Create Tournament","টুর্নামেন্ট তৈরি করুন")+'</button></div>';
+  return cta+h};
+ACT.mkt=function(){twpOpen=-1;TW=nwT();aset="tw";adm="setup";goTop=true;view="admin";draw()};
+ACT.twexit=function(){aset="list";if(!hasAdmin())view="home";goTop=true;draw()};
+
+/* ===== 3) one-screen scorer: fit calculation with the larger bars ===== */
+window.__fit=function(){
+  var b=document.body;
+  if(showSq)b.classList.remove("scoring");
+  if(!b.classList.contains("scoring")){if(b.style.getPropertyValue("--kh")){b.style.removeProperty("--kh");b.style.removeProperty("--z")}__fitK="";return}
+  requestAnimationFrame(function(){
+    if(!b.classList.contains("scoring")||window.pageYOffset>4)return;
+    var app=document.getElementById("app"),last=app&&app.lastElementChild;if(!last)return;
+    var nav=document.querySelector(".bnav"),navH=0;
+    if(nav){var cs=getComputedStyle(nav);navH=nav.offsetHeight+(parseFloat(cs.bottom)||0)}
+    var H=window.innerHeight,goal=H-navH-8;
+    function put(g){b.style.setProperty("--z",(1+.25*g).toFixed(3));b.style.setProperty("--kh",(32+98*g).toFixed(1)+"px")}
+    function bot(){return last.getBoundingClientRect().bottom+window.pageYOffset}
+    var key=H+"|"+navH;
+    if(key===__fitK&&__fitG>=0){put(__fitG);var d=goal-bot();if(d>=-1&&d<=14)return}
+    put(0);if(bot()>goal){b.style.removeProperty("--kh");b.style.removeProperty("--z");__fitK=key;__fitG=-1;return}
+    var lo=0,hi=1;put(1);if(bot()<=goal){__fitK=key;__fitG=1;return}
+    for(var i=0;i<7;i++){var mid=(lo+hi)/2;put(mid);if(bot()<=goal)lo=mid;else hi=mid}
+    put(lo);__fitK=key;__fitG=lo})};
+
+/* ===== 4) LAG FIX: text fields were saving to the database and redrawing the whole page on every keystroke ===== */
+["of","pq","pj","tinf","tmf","plf","rul","sch","fxd","fxt","dirp","dirtn","dirtt"].forEach(function(k){
+  var o=INP[k];if(!o)return;
+  INP[k]=function(el,ev){
+    if(ev!=="change")return;
+    var tag=el.tagName,ty=(el.type||"").toLowerCase();
+    if(tag==="SELECT"||ty==="color"||ty==="date"||ty==="time"||ty==="datetime-local"||ty==="file")return o(el,ev);
+    var d=window.draw;window.draw=function(){pending=true};   /* redraw later, on blur */
+    try{o(el,ev)}finally{window.draw=d}}});
+}
+(function(){var n=0;function go(){if(typeof TX!=="undefined"&&typeof ACT!=="undefined"&&typeof draw==="function"&&document.getElementById("app")){try{__v15()}catch(e){console.error("v15 patch",e)}}else if(n++<100)setTimeout(go,100)}
+if(document.readyState==="complete")go();else window.addEventListener("load",go)})();
+</script>
+
 </body></html>
