@@ -3419,8 +3419,10 @@ if(document.readyState==="complete")go();else window.addEventListener("load",go)
 #a4m .a4b button{min-height:48px;padding:8px 20px;border-radius:14px;font-weight:800;font-size:1rem;border:1px solid rgba(255,255,255,.5);background:#fff;color:#0c2036;cursor:pointer}
 #a4m .a4b button.p{background:linear-gradient(180deg,#3d9df2,#1673cc);color:#fff;border-color:transparent}
 #a4m .a4h{color:#fff;font-weight:700;font-size:.85rem;text-align:center}
-.a4bar{display:flex;gap:8px;margin:0 0 8px}
-.a4bar button{flex:1;min-height:46px}
+.a4bar{display:flex;justify-content:flex-end;margin:0 0 6px}
+.a4bar button{flex:none;min-height:0;width:auto;padding:5px 10px;font-size:11px;line-height:1.2;border-radius:999px;opacity:.9}
+.a4mini{display:flex;justify-content:flex-end;margin-top:4px}
+.a4mini button{flex:none;min-height:0;width:auto;padding:3px 8px;font-size:10px;line-height:1.2;border-radius:999px;opacity:.85}
 </style>
 
 <script id="v16js">
@@ -3635,7 +3637,7 @@ function exportA4(id){
   }).catch(function(e){BUSY=false;console.error(e);toast(L2("Export failed","এক্সপোর্ট ব্যর্থ"))})}
 
 /* ---------- buttons ---------- */
-function bar(id){return '<div class="a4bar"><button class="k pri" data-a="a4x" data-v="'+id+'">📄 '+L2("Download A4 Scorecard (JPG)","A4 স্কোরকার্ড ডাউনলোড (JPG)")+'</button></div>'}
+function bar(id){return '<div class="a4bar"><button class="k pri" data-a="a4x" data-v="'+id+'">📄 '+L2("A4 JPG","A4 JPG")+'</button></div>'}
 ACT.a4x=function(el){exportA4(el.dataset.v)};
 
 var _mv=matchV;
@@ -3651,7 +3653,7 @@ admMatchBody=function(m){return bar(m.id)+_amb(m)};
 var _card=card;
 card=function(m){
   var h=_card(m);if(mst(m)==="up")return h;
-  return h.replace(/<\/div>$/,'<div class="ac" style="margin-top:6px"><button class="k sm" data-a="a4x" data-v="'+m.id+'" onclick="event.stopPropagation()">📄 A4 JPG</button></div></div>')};
+  return h.replace(/<\/div>$/,'<div class="a4mini"><button class="k sm" data-a="a4x" data-v="'+m.id+'" onclick="event.stopPropagation()">📄 A4 JPG</button></div></div>')};
 /* the card itself opens the match on click; stop the button click from also opening it */
 var _openm=ACT.openm;
 ACT.openm=function(el,ev){if(ev&&ev.target&&ev.target.closest&&ev.target.closest('[data-a="a4x"]'))return;_openm(el,ev)};
