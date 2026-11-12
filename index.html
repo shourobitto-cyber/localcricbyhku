@@ -3419,7 +3419,7 @@ if(document.readyState==="complete")go();else window.addEventListener("load",go)
 #a4m .a4b button{min-height:48px;padding:8px 20px;border-radius:14px;font-weight:800;font-size:1rem;border:1px solid rgba(255,255,255,.5);background:#fff;color:#0c2036;cursor:pointer}
 #a4m .a4b button.p{background:linear-gradient(180deg,#3d9df2,#1673cc);color:#fff;border-color:transparent}
 #a4m .a4h{color:#fff;font-weight:700;font-size:.85rem;text-align:center}
-.a4bar{display:flex;justify-content:flex-end;margin:0 0 6px}
+.a4bar{display:flex;justify-content:flex-end;margin:12px 0 6px}
 .a4bar button{flex:none;min-height:0;width:auto;padding:5px 10px;font-size:11px;line-height:1.2;border-radius:999px;opacity:.9}
 .a4mini{display:flex;justify-content:flex-end;margin-top:4px}
 .a4mini button{flex:none;min-height:0;width:auto;padding:3px 8px;font-size:10px;line-height:1.2;border-radius:999px;opacity:.85}
@@ -3643,11 +3643,10 @@ ACT.a4x=function(el){exportA4(el.dataset.v)};
 var _mv=matchV;
 matchV=function(){
   var h=_mv(),m=getMatch(mid);if(!m)return h;
-  var back='<button class="back" data-a="home">'+t("back")+'</button>',i=h.indexOf(back);
-  return i===0?back+bar(m.id)+h.slice(back.length):bar(m.id)+h};
+  return h+bar(m.id)};
 
 var _amb=admMatchBody;
-admMatchBody=function(m){return bar(m.id)+_amb(m)};
+admMatchBody=function(m){return _amb(m)+bar(m.id)};
 
 /* match cards on the home list: small quick button for finished matches */
 var _card=card;
